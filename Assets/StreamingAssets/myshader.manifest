@@ -1,0 +1,20 @@
+ManifestFileVersion: 0
+CRC: 3297280092
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: dc6e541f693dec023f280ddc68455a12
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: cc7b69794a2bdada249e557ebbfded10
+  IndirectAssetFileHash:
+    serializedVersion: 2
+    Hash: 31d6cfe0d16ae931b73c59d7e0c089c0
+  InternalCABHash: CAB-cba8e5949746d7ee4938b1e75c0bcd9a
+HashAppended: 0
+ClassTypes:
+- Class: 48
+  Script: {instanceID: 0}
+Assets:
+- Assets/Shader/NewSurfaceShader.shader
+Dependencies: []
