@@ -1,12 +1,12 @@
 ﻿
 
-using UnityEditor.VersionControl;
+using Assets.AssetBundleManagement.Loader;
 using UnityEngine;
 
 namespace AssetBundleManagement
 {
 
-    public class AssetBundleLoadOperation : ILoadOperation
+    internal class AssetBundleLoadOperation : ILoadOperation
     {
         //  private AssetBundle m_BunleObject;
         private AssetBundleLoader m_AssetBundleLoader;
@@ -14,35 +14,37 @@ namespace AssetBundleManagement
         private int m_DependenciesRemainCount;
         //private bool m_NeedLoadDependcy;
 
-        private IAssetBundleLoadMananger m_AbMananger;
+        private IResourceUpdater m_AbMananger;
 
-        public System.Action<AssetBundle> OnSelfLoadComplete;
-        public System.Action OnDependenciesLoadComplete;
-        
+        internal System.Action<AssetBundle> OnSelfLoadComplete;
+        internal System.Action OnDependenciesLoadComplete;
 
-        public string GetLoadKey()
+
+        internal string GetLoadKey()
         {
             return m_LoadRequestOptions.RealName;
         }
 
-        public bool HasNoDepend()
+        internal bool HasNoDepend()
         {
             return m_DependenciesRemainCount == 0;
         }
-        public AssetBundleLoadOperation(AssetBundleRequestOptions requestOptions, IAssetBundleLoadMananger mgr,int DependenciesRemainCount)
+        internal AssetBundleLoadOperation(AssetBundleRequestOptions requestOptions, IResourceUpdater mgr, int DependenciesRemainCount)
         {
-        //    m_NeedLoadDependcy         = loadDependcy;
-            m_LoadRequestOptions   = requestOptions;
+            //    m_NeedLoadDependcy         = loadDependcy;
+            m_LoadRequestOptions = requestOptions;
             m_DependenciesRemainCount = DependenciesRemainCount;
-            m_AbMananger           = mgr;
-            m_AssetBundleLoader    = AssetBundleLoadFactory.CreateAssetBundleLoader();
+            m_AbMananger = mgr;
+            m_AssetBundleLoader = AssetBundleFactoryFacade.CreateAssetBundleLoader(requestOptions.Pattern);
 
         }
 
-        public void ReduceDependenciesRemain()
+        internal void ReduceDependenciesRemain()
         {
             Debug.Assert(m_DependenciesRemainCount > 0, "OnOneDependenciesLoadComplete state dont correct");
             --m_DependenciesRemainCount;
+            ResourceProfiler.BundleOneDepndencyDone(GetLoadKey(),m_DependenciesRemainCount);
+        //    Debug.Log("Reduce dependices");
             if (m_DependenciesRemainCount == 0)
             {
                 if (OnDependenciesLoadComplete != null)
@@ -50,7 +52,7 @@ namespace AssetBundleManagement
             }
         }
 
-        public void BeginOperation()
+        internal void BeginOperation()
         {
             m_AssetBundleLoader.Begin(m_LoadRequestOptions);
             m_AbMananger.AddLoadingOperation(this);
@@ -63,14 +65,18 @@ namespace AssetBundleManagement
 
         public void PollOperationResult()
         {
-            AssetBundle assetBundle = m_AssetBundleLoader.GetResult();
-            if (assetBundle != null)
+            AssetBundle assetBundle;
+            if (m_AssetBundleLoader.GetResult(out assetBundle))
             {
                 m_AbMananger.RemoveLoadingOperation(this);
                 if (OnSelfLoadComplete != null)
                     OnSelfLoadComplete(assetBundle);
                 m_AssetBundleLoader = null;
             }
+        }
+        public override string ToString()
+        {
+            return string.Format("LoadBundle:{0}", GetLoadKey());
         }
     }
 }

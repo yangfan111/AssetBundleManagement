@@ -2,41 +2,137 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 namespace AssetBundleManagement
 {
-    public interface ILoadOperation
+    internal interface ILoadOperation
     {
         void PollOperationResult();
 
     }
-    public interface IAssetBundleLoadMananger
+    internal interface IDisposableResourceHandle
     {
-        void AddLoadingOperation(ILoadOperation loadOperation);
-        void RemoveLoadingOperation(ILoadOperation loadOperation);
+        bool InDestroyList { get; set; }
+        float WaitDestroyStartTime { get; set; }
+        bool IsUnUsed();
+        void Destroy();
+
+        int DestroyWaitTime { get; }
+
+        string ToStringDetail();
     }
-    public enum LoadPriority : byte
+    public struct AssetInfo
     {
-        P_NoKown = 0,
-        P_LOW = 1,
-        P_SINGLE = 2,
-        P_Art_HIGH = 3,
-        P_MIDDLE = 5,
-        P_GROUP_JOB = 6,
-        P_NORMAL_HIGH = 10,
-        P_THIRD_MODEL_HIGH = 12,
-        P_FIRST_PRELOAD_HIGH = 0xF,
-        P_BIGMAP_UI_HIGH = 18,
-        P_FIRST_HIGH = 20
+        public static readonly AssetInfo EmptyInstance = new AssetInfo(string.Empty, string.Empty);
+        public string BundleName;
+        public string AssetName;
+
+        public AssetInfo(string bundle, string asset)
+        {
+            this.BundleName = bundle;
+            this.AssetName = asset;
+        }
+
+        public bool IsValid()
+        {
+            if (string.IsNullOrEmpty(BundleName) || string.IsNullOrEmpty(AssetName))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}:{1}", BundleName, AssetName);
+        }
+
+        public class AssetInfoComparer : IEqualityComparer<AssetInfo>
+        {
+
+            public bool Equals(AssetInfo x, AssetInfo y)
+            {
+                return string.Equals(x.AssetName, y.AssetName, System.StringComparison.Ordinal)
+                       && string.Equals(x.BundleName, y.BundleName, System.StringComparison.Ordinal);
+            }
+
+            public int GetHashCode(AssetInfo obj)
+            {
+                unchecked
+                {
+                    int hash = 17;
+                    hash = hash * 23 + (obj.BundleName != null ? obj.BundleName.GetHashCode() : 0);
+                    hash = hash * 23 + (obj.AssetName != null ? obj.AssetName.GetHashCode() : 0);
+                    return hash;
+                }
+            }
+
+            public static readonly AssetInfoComparer Instance = new AssetInfoComparer();
+        }
+
+
+
+    }
+    public struct BundleKey : IEqualityComparer<BundleKey>
+    {
+        public string BundleName;
+        public int BundleVersion;
+
+        public BundleKey(string bundleName, int bundleVersion = 0)
+        {
+            BundleName = bundleName;
+            BundleVersion = bundleVersion;
+        }
+        
+        public bool Equals(BundleKey x, BundleKey y)
+        {
+            return string.Equals(x.BundleName, y.BundleName, System.StringComparison.Ordinal)
+                  && x.BundleVersion == y.BundleVersion;
+        }
+
+        public int GetHashCode(BundleKey obj)
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + (obj.BundleName != null ? obj.BundleName.GetHashCode() : 0);
+                hash = hash * 23 + obj.BundleVersion.GetHashCode();
+                return hash;
+            }
+        }
+    }
+    public class AssetBundleRequestOptions
+    {
+        public string RealName;
+        public string[] Dependencies;
+        public AssetBundleLoadingPattern Pattern;
+
+        public int GetDependenciesCount()
+        {
+            return Dependencies != null ? Dependencies.Length : 0;
+        }
     }
 
-    public enum AssetBundleLoadState
+    public struct ResourceManangerStatus
     {
-        NotBegin,
-        Loading,
-        Loaded,
-    }
+        public int AllAssetSucessCont;
+        public int AllBundleSucessCont;
+        public int AllAssetHoldReference;
+        public int AllBundleHoldReference;
+        public int LoadingOperationCont;
+        public int WaitRequestAssetTaskCount;
+        public int ToBeDestroyCont;
+        public int AllAssetFailedCont;
+        public int AllBundleFailedCont;
 
-  
-    
+        public bool IsAllClear()
+        {
+            return AllAssetSucessCont == 0 && AllBundleSucessCont == 0 && LoadingOperationCont == 0 && ToBeDestroyCont == 0;
+        }
+        public override string ToString()
+        {
+            return string.Format("AllAssetCont: {0}, AllBundleCont: {1}, AllAssetHoldReference: {2}, AllBundleHoldReference: {3}, LoadingOperationCont: {4}, " +
+                "WaitRequestAssetTaskCount: {5}, ToBeDestroyCont: {6},AllAssetFailedCont:{7},AllBundleFailedCont:{8}",
+                AllAssetSucessCont, AllBundleSucessCont, AllAssetHoldReference, AllBundleHoldReference, LoadingOperationCont, WaitRequestAssetTaskCount, ToBeDestroyCont, AllAssetFailedCont, AllBundleFailedCont);
+        }
+    }
 }

@@ -1,39 +1,78 @@
+using System.IO;
+using Assets.AssetBundleManagement.Loader;
 using UnityEngine;
 
 namespace AssetBundleManagement
 {
-    public abstract class AssetBundleLoader
+    internal abstract class AssetBundleLoader
     {
-        public abstract void Begin(AssetBundleRequestOptions loadRequestOptions);
+        internal abstract void Begin(AssetBundleRequestOptions loadRequestOptions);
 
-        public abstract AssetBundle GetResult();
+        internal abstract bool GetResult(out AssetBundle ab);
 
     }
 
-    public class AssetBundleFileAsyncLoader : AssetBundleLoader
+    internal class AssetBundleFileAsyncLoader : AssetBundleLoader
     {
         private AssetBundleCreateRequest m_LoadFromFileRequest;
-        public override void Begin(AssetBundleRequestOptions loadRequestOptions)
+        internal override void Begin(AssetBundleRequestOptions loadRequestOptions)
         {
-            m_LoadFromFileRequest = AssetBundle.LoadFromFileAsync(loadRequestOptions.RealName, loadRequestOptions.Crc);
+            string loadPath = Path.Combine(ResourceConfigure.LocalAssetPath, loadRequestOptions.RealName);
+            m_LoadFromFileRequest = AssetBundle.LoadFromFileAsync(loadPath);
         }
 
-        public override AssetBundle GetResult()
+        internal override bool GetResult(out AssetBundle ab)
         {
+            ab = null;
             if (m_LoadFromFileRequest.isDone)
             {
-                return m_LoadFromFileRequest.assetBundle;
+                ab = m_LoadFromFileRequest.assetBundle;
+                m_LoadFromFileRequest = null;
+                return true;
             }
 
-            return null;
+            return false;
         }
     }
 
-    public static class AssetBundleLoadFactory
+    internal class AssetBundleHotFixLoader : AssetBundleLoader
     {
-        public static AssetBundleLoader CreateAssetBundleLoader()
+        private AssetBundleCreateRequest m_LoadFromFileRequest;
+        internal override void Begin(AssetBundleRequestOptions loadRequestOptions)
         {
-            return new AssetBundleFileAsyncLoader();
+            string loadPath = Path.Combine(ResourceConfigure.LocalAssetPath+"_hotfix", loadRequestOptions.RealName);
+            m_LoadFromFileRequest = AssetBundle.LoadFromFileAsync(loadPath);
+        }
+
+        internal override bool GetResult(out AssetBundle ab)
+        {
+            ab = null;
+            if (m_LoadFromFileRequest.isDone)
+            {
+                ab = m_LoadFromFileRequest.assetBundle;
+                m_LoadFromFileRequest = null;
+                return true;
+            }
+
+            return false;
         }
     }
+
+    internal class AssetBundleSimulateLoader : AssetBundleLoader
+    {
+        private static AssetBundle emptyAssetBundle = new AssetBundle();
+        internal override void Begin(AssetBundleRequestOptions loadRequestOptions)
+        {
+            // simulate方式无需加载ab
+        }
+
+        internal override bool GetResult(out AssetBundle ab)
+        {
+            // 返回一个没有用的AssetBundle对象， 主要是为了框架内有些判断保持一致，实际这个AssetBundle对象没有用处
+            ab = emptyAssetBundle;
+            return true;
+        }
+    }
+
+
 }
